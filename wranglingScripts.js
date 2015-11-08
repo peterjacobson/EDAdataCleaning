@@ -4,15 +4,26 @@ function updateSheets() {
   // delete all extra rows on sheets to update
   // create a 'changeLogs' sheet
   // give the 'changeLogs' sheet 50,000 rows
+  var ui = SpreadsheetApp.getUi();
   
-  sheetsToUpdate = ['Marketing / App Data']//, 'Students', 'Student Leads']
-  for (var i = 0; i < sheetsToUpdate.length; i++) {
-    SpreadsheetApp.getUi().alert('PROCESS:  ' + sheetsToUpdate[i] + '\nIN SPREADSHEET:  ' + SpreadsheetApp.getActiveSpreadsheet().getName());
-    scrapeDataInto(sheetsToUpdate[i]);
-  }
+  sheetsToUpdate = ['Marketing / App Data', 'Students', 'Student Leads']
+  
+  var sheetNum = ui.prompt("Select sheet index\n [0='Marketing / App Data', 1='Students', 2='Student Leads']").getResponseText()
+
+  var continueScript = ui.alert('PROCESS:  ' + sheetsToUpdate[sheetNum] + '\nIN SPREADSHEET:  ' + SpreadsheetApp.getActiveSpreadsheet().getName(), ui.ButtonSet.YES_NO);
+  Logger.log(continueScript);
+  Logger.log(ui.button.NO)
+  if (continueScript == ui.Button.NO) { return }
+  scrapeDataInto(sheetsToUpdate[sheetNum]);
+//  }
 }
 
+
 function scrapeDataInto(sheetName) {
+  var ui = DocumentApp.getUi();
+  var logCountNum = parseInt(ui.prompt("Enter Count number").getResponseText())
+  var logColNum = parseInt(ui.prompt("Enter current column number").getResponseText())
+  var logRowNum = parseInt(ui.prompt("Enter current row number").getResponseText())
   var currentSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(sheetName);
   var currentSheetData = currentSheet.getDataRange().getValues();
 
@@ -23,11 +34,13 @@ function scrapeDataInto(sheetName) {
   var sheetFirstDataRow = 6 - 1;
   var numColumns = currentSheetData[titleRow].length;
   
-  var countChanges = 0;
+  var logSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('changeLogs');
+  logSheet.getRange(1,6,1,3).setValues([['col', 'row', 'totalchanges']])
+  var countChanges = logCountNum;
   var changeLog = [['sheetUpdated', 'column', 'row', 'replaced value', 'new value']];
   
   // loop through columns
-  for (var col = 1; col < numColumns; col++) { 
+  for (var col = logColNum + 1; col < numColumns; col++) { 
     
     // if reference exists
     var dataSourceColumn = parseInt(currentSheetData[referenceToDataSourceColumnRow][col]) - 1;
@@ -44,8 +57,7 @@ function scrapeDataInto(sheetName) {
       });
       
       //process rows
-      for (var row = sheetFirstDataRow; row < currentSheetData.length; row++) {
-        var logSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('changeLogs');
+      for (var row = logRowNum + 1; row < currentSheetData.length; row++) {
         logSheet.getRange(2,6).setValue(col);
         logSheet.getRange(2,7).setValue(row);
         
@@ -59,6 +71,7 @@ function scrapeDataInto(sheetName) {
           if (dataForName) {
             
             countChanges++;
+            logSheet.getRange(2,8).setValue(countChanges);
             var sheetRow = row + 1;
             var sheetCol = col + 1;
             var oldValue = currentSheet.getRange(row + 1, col + 1).getValue();
